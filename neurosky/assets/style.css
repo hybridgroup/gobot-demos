@@ -1,0 +1,39 @@
+.chart rect {
+  fill: steelblue;
+}
+.chart rect.delta {
+  fill: #52A6FF;
+}
+ 
+.chart rect.theta {
+  fill: #BF3629;
+}
+ 
+.chart rect.loAlpha {
+  fill: #61BF40;
+}
+ 
+.chart rect.hiAlpha {
+  fill: #417F2B;
+}
+ 
+.chart rect.loBeta {
+  fill: #895ABF;
+}
+ 
+.chart rect.hiBeta {
+  fill: #5C3C7F;
+}
+ 
+.chart rect.loGamma {
+  fill: #536FBF;
+}
+ 
+.chart rect.midGamma {
+  fill: #374A7F;
+}
+ 
+.chart text {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px
+}

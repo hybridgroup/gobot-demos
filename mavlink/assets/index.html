@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="./jquery-1.11.0.min.js"></script>
+    <script>
+    var es = new EventSource("http://127.0.0.1:3000/api/robots/irisBot/devices/iris/events/telemetry");
+ 
+    es.addEventListener('message', function(message) {
+      var html = '',
+          data = JSON.parse(message.data);
+ 
+      $.each(data, function(key, value){
+        html += '<tr><td>' + key + '</td><td>' + value + '</td></tr>';
+      });
+ 
+      console.log(data);
+      $(".attitude").css({ WebkitTransform: 'rotate(' + data.Roll + 'deg)'});
+      $("#summary").html(html);
+    }, false);
+ 
+    </script>
+ 
+    <style>
+    .container {
+      width: 550px;
+      height: 500px;
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: red;
+      overflow: hidden;
+    }
+ 
+    .attitude {
+      width: 200%;
+      height: 200%;
+      margin-top: -50%;
+      margin-left: -50%;
+    }
+ 
+    .attitude div {
+      width: 100%;
+      height: 52%;
+    }
+ 
+    .attitude .sky {
+      background: #02A2F9;
+    }
+ 
+    .attitude .earth {
+      background: #A07857;
+    }
+    </style>
+ 
+  </head>
+  <body>
+    <table id='summary'>
+    </table>
+ 
+    <div class="container">
+      <div class="attitude">
+        <div class="sky"></div>
+        <div class="earth"></div>
+      </div>
+    </div>
+  </body>
+</html>
