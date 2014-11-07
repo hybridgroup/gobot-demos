@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"time"
 
 	"github.com/hybridgroup/gobot"
@@ -19,7 +20,7 @@ type pair struct {
 func main() {
 	gbot := gobot.NewGobot()
 
-	m := mqtt.NewMqttAdaptor("mqtt", "tcp://192.168.0.90:1883")
+	m := mqtt.NewMqttAdaptor("mqtt", "tcp://192.168.0.90:1883", "gcs")
 	ardroneAdaptor := ardrone.NewArdroneAdaptor("Drone", "192.168.0.40")
 	joystickAdaptor := joystick.NewJoystickAdaptor("ps3")
 
@@ -31,9 +32,22 @@ func main() {
 	drone := ardrone.NewArdroneDriver(ardroneAdaptor, "Drone")
 
 	work := func() {
+		dgram := url.Values{
+			"name":         {"gcs"},
+			"dispenser_id": {"3"},
+			"drink_id":     {"0"},
+			"event":        {"available"},
+			"details":      {"drone"},
+		}
+		m.Publish("gcs", []byte(dgram.Encode()))
 		offset := 32767.0
 		rightStick := pair{x: 0, y: 0}
 		leftStick := pair{x: 0, y: 0}
+
+		m.On("drone", func(data []byte) {
+			dgram.Set("event", "delivery complete")
+			m.Publish("gcs", []byte(dgram.Encode()))
+		})
 
 		gobot.On(joystick.Event("circle_press"), func(data interface{}) {
 			fmt.Println("Drop!")
@@ -41,12 +55,16 @@ func main() {
 		})
 		gobot.On(joystick.Event("square_press"), func(data interface{}) {
 			drone.TakeOff()
+			dgram.Set("event", "en route")
+			m.Publish("gcs", []byte(dgram.Encode()))
 		})
 		gobot.On(joystick.Event("triangle_press"), func(data interface{}) {
 			drone.Hover()
 		})
 		gobot.On(joystick.Event("x_press"), func(data interface{}) {
 			drone.Land()
+			dgram.Set("event", "available")
+			m.Publish("gcs", []byte(dgram.Encode()))
 		})
 		gobot.On(joystick.Event("left_x"), func(data interface{}) {
 			val := float64(data.(int16))

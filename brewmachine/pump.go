@@ -2,33 +2,33 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/api"
 	"github.com/hybridgroup/gobot/platforms/gpio"
 	"github.com/hybridgroup/gobot/platforms/intel-iot/edison"
 	"github.com/hybridgroup/gobot/platforms/mqtt"
-	"github.com/hybridgroup/gobot/platforms/pebble"
 )
 
 func main() {
 	gbot := gobot.NewGobot()
-	server := api.NewAPI(gbot)
-	server.Port = "8080"
-	server.Start()
 
 	e := edison.NewEdisonAdaptor("edison")
-	p := pebble.NewPebbleAdaptor("pebble")
-	m := mqtt.NewMqttAdaptor("mqtt", "tcp://192.168.0.90:1883")
+	m := mqtt.NewMqttAdaptor("mqtt", "tcp://192.168.0.90:1883", "pump")
 
 	lever := gpio.NewButtonDriver(e, "lever", "2")
 	fault := gpio.NewButtonDriver(e, "fault", "4")
 	pump := gpio.NewDirectPinDriver(e, "pump", "13")
 
-	watch := pebble.NewPebbleDriver(p, "pebble")
-
 	work := func() {
+		dgram := url.Values{
+			"name":         {"Four"},
+			"dispenser_id": {"4"},
+			"drink_id":     {"0"},
+			"event":        {"online"},
+			"details":      {"dispenser"},
+		}
 		pumping := false
 		served := byte(0)
 		gobot.On(lever.Event("push"), func(data interface{}) {
@@ -36,7 +36,9 @@ func main() {
 				pumping = true
 				pump.DigitalWrite(1)
 				served++
-				m.Publish("pump", []byte{served})
+				dgram.Set("event", "online")
+				dgram.Set("drink_id", fmt.Sprintf("%v", served))
+				m.Publish("pump", []byte(dgram.Encode()))
 				gobot.After(2*time.Second, func() {
 					pump.DigitalWrite(0)
 					pumping = false
@@ -45,31 +47,14 @@ func main() {
 		})
 
 		gobot.On(fault.Event("push"), func(data interface{}) {
-			m.Publish("fault", []byte{})
-		})
-
-		m.On("pump", func(data interface{}) {
-			msg := fmt.Sprintf("Customers served: %v", data.([]byte)[0])
-			fmt.Println(msg)
-			watch.SendNotification(msg)
-		})
-
-		m.On("fault", func(data interface{}) {
-			msg := "There was a fault!"
-			fmt.Println(msg)
-			watch.SendNotification(msg)
-		})
-
-		m.On("drone", func(data interface{}) {
-			msg := fmt.Sprintf("Message from drone: %v", string(data.([]byte)))
-			fmt.Println(msg)
-			watch.SendNotification(msg)
+			dgram.Set("event", "error")
+			m.Publish("fault", []byte(dgram.Encode()))
 		})
 	}
 
 	gbot.AddRobot(gobot.NewRobot("brewmachine",
-		[]gobot.Connection{e, m, p},
-		[]gobot.Device{lever, fault, pump, watch},
+		[]gobot.Connection{e, m},
+		[]gobot.Device{lever, fault, pump},
 		work,
 	))
 
