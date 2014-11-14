@@ -47,23 +47,26 @@ func hqRobot() *gobot.Robot {
 				fmt.Println(err)
 			}
 		}
-
 		m.On("pump", func(data []byte) {
-			post(data)
+			m.Publish("startPump", []byte{})
+		})
+
+		m.On("pumped", func(data []byte) {
+			go post(data)
 			v, _ := url.ParseQuery(string(data))
 			watch(fmt.Sprintf("Customers served: %v", v.Get("drink_id")))
 		})
 		m.On("fault", func(data []byte) {
-			post(data)
+			go post(data)
 			watch("There was a fault!")
 		})
 		m.On("drone", func(data []byte) {
-			post(data)
+			go post(data)
 			watch(fmt.Sprintf("Message from drone: %v", string(data)))
 		})
 		m.On("gcs", func(data []byte) {
 			fmt.Println(string(data))
-			post(data)
+			go post(data)
 		})
 	}
 
@@ -76,6 +79,13 @@ func hqRobot() *gobot.Robot {
 func main() {
 	gbot := gobot.NewGobot()
 	api.NewAPI(gbot).Start()
+
+	gbot.AddCommand("pump", func(params map[string]interface{}) interface{} {
+		return gbot.Robot("mqtt").Connection("mqtt").(*mqtt.MqttAdaptor).Publish("startPump", []byte{})
+	})
+	gbot.AddCommand("fault", func(params map[string]interface{}) interface{} {
+		return gbot.Robot("mqtt").Connection("mqtt").(*mqtt.MqttAdaptor).Publish("startFault", []byte{})
+	})
 
 	gbot.AddRobot(hqRobot())
 	gbot.AddRobot(pebbleRobot())

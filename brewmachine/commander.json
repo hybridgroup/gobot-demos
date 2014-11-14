@@ -1,0 +1,22 @@
+{
+  "command_set":{
+    "name": "pump",
+    "type": "list",
+    "commands":[
+      {
+        "label": "Serve",
+        "robot": "",
+        "device": "",
+        "name": "pump",
+        "params": {}
+      },
+      {
+        "label": "Fault",
+        "robot": "",
+        "device": "",
+        "name": "fault",
+        "params": {}
+      }    
+    ]
+  }
+}

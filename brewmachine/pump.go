@@ -31,14 +31,15 @@ func main() {
 		}
 		pumping := false
 		served := byte(0)
-		gobot.On(lever.Event("push"), func(data interface{}) {
+
+		m.On("startPump", func(data []byte) {
 			if !pumping {
 				pumping = true
 				pump.DigitalWrite(1)
 				served++
 				dgram.Set("event", "online")
 				dgram.Set("drink_id", fmt.Sprintf("%v", served))
-				m.Publish("pump", []byte(dgram.Encode()))
+				m.Publish("pumped", []byte(dgram.Encode()))
 				gobot.After(2*time.Second, func() {
 					pump.DigitalWrite(0)
 					pumping = false
@@ -46,9 +47,17 @@ func main() {
 			}
 		})
 
-		gobot.On(fault.Event("push"), func(data interface{}) {
+		gobot.On(lever.Event("push"), func(data interface{}) {
+			m.Publish("pump", []byte{})
+		})
+
+		m.On("startFault", func(data []byte) {
 			dgram.Set("event", "error")
 			m.Publish("fault", []byte(dgram.Encode()))
+		})
+
+		gobot.On(fault.Event("push"), func(data interface{}) {
+			m.Publish("startFault", []byte{})
 		})
 	}
 
